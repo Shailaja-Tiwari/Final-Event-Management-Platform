@@ -10,6 +10,16 @@ const eventList = [
   { id: 6, heading: "Virtual Reality: The Next Frontier" },
 ];
 
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 const Ticket = ({ show, handleClose, selectedEvent }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -17,44 +27,77 @@ const Ticket = ({ show, handleClose, selectedEvent }) => {
     event: ''
   });
 
-  // Update formData.event when selectedEvent changes
   useEffect(() => {
     if (selectedEvent) {
-      setFormData(prev => ({
-        ...prev,
-        event: selectedEvent
-      }));
+      setFormData(prev => ({ ...prev, event: selectedEvent }));
     }
   }, [selectedEvent]);
 
   const handleChange = (e) => {
-    setFormData(prevState => ({
-      ...prevState,
-      [e.target.name]: e.target.value
-    }));
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const isScriptLoaded = await loadRazorpayScript();
+    if (!isScriptLoaded) {
+      alert('Failed to load Razorpay SDK.');
+      return;
+    }
+
     try {
-      const response = await fetch('http://localhost:5000/gettickets', {
+      const orderRes = await fetch('http://localhost:5000/gettickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, amount: 100 }) // 👈 Add this
+      });
+      
+      const data = await orderRes.json();
+      if (!data.success) {
+        alert('Failed to create order.');
+        return;
+      }
+
+      const { order } = data;
+      console.log("order",order);
+      const rzp = new window.Razorpay({
+        key: "rzp_test_pUnnS1FLj9QcVN", // ✅ no tab/space at end
+        amount: order.amount,
+        currency: order.currency,
+        name: "Event Ticket",
+        description: formData.event,
+        order_id: order.id,
+        handler: async (response) => {
+          const verifyRes = await fetch('http://localhost:5000/confirm-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...formData,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+
+          const result = await verifyRes.json();
+          alert(result.message);
+          if (result.success) {
+            handleClose();
+            setFormData({ name: '', email: '', event: '' });
+          }
+        },
+        prefill: {
+          name: formData.name,
+          email: formData.email
+        },
+        theme: { color: "#28a745" }
       });
 
-      const data = await response.json();
-      if (data.success) {
-        alert('Ticket booked successfully!');
-        handleClose();
-        setFormData({ name: '', email: '', event: '' });
-      } else {
-        alert(data.message);
-      }
+      rzp.open();
     } catch (error) {
-      console.error('Error:', error);
-      alert('Something went wrong. Please try again.');
+      console.error(error);
+      alert('Something went wrong.');
     }
   };
 
@@ -65,50 +108,24 @@ const Ticket = ({ show, handleClose, selectedEvent }) => {
       </Modal.Header>
       <Modal.Body>
         <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3" controlId="formName">
+          <Form.Group className="mb-3">
             <Form.Label>Name</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Enter your name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
+            <Form.Control name="name" value={formData.name} onChange={handleChange} required />
           </Form.Group>
-
-          <Form.Group className="mb-3" controlId="formEmail">
-            <Form.Label>Email address</Form.Label>
-            <Form.Control
-              type="email"
-              placeholder="Enter your email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
+          <Form.Group className="mb-3">
+            <Form.Label>Email</Form.Label>
+            <Form.Control name="email" type="email" value={formData.email} onChange={handleChange} required />
           </Form.Group>
-
-          <Form.Group className="mb-3" controlId="formEvent">
-            <Form.Label>Select Event</Form.Label>
-            <Form.Select
-              name="event"
-              value={formData.event}
-              onChange={handleChange}
-              required
-            >
-              <option value="">-- Select an Event --</option>
-              {eventList.map(event => (
-                <option key={event.id} value={event.heading}>
-                  {event.heading}
-                </option>
+          <Form.Group className="mb-3">
+            <Form.Label>Event</Form.Label>
+            <Form.Select name="event" value={formData.event} onChange={handleChange} required>
+              <option value="">-- Select Event --</option>
+              {eventList.map(e => (
+                <option key={e.id} value={e.heading}>{e.heading}</option>
               ))}
             </Form.Select>
           </Form.Group>
-
-          <Button variant="success" type="submit">
-            Book Ticket
-          </Button>
+          <Button variant="success" type="submit">Pay & Book Ticket</Button>
         </Form>
       </Modal.Body>
     </Modal>
