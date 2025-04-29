@@ -1,236 +1,278 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import './Portfolio.css'; // We'll create this CSS file next
-import { FaJs, FaReact, FaNodeJs, FaHtml5, FaPython, FaGit } from 'react-icons/fa';
-const Portfolio = () => {
-  // Chatbot state (same as before)
-  const [message, setMessage] = useState('');
-  const [chatHistory, setChatHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('about');
+import React, { useState, useRef, useEffect } from 'react';
 
-  const API_CONFIG = {
-    baseUrl: "https://api.aimlapi.com/v1",
-    apiKey: "3d116bb1205748f9bf23f53d1a31d5d0", // Replace with your actual key
-    model: "gpt-3.5-turbo"
-  };
-<div className={chat-widget ${chatOpen ? 'open' : ''}}>
-<div className="chat-header" onClick={() => setChatOpen(!chatOpen)}>
-  <h3>AI Assistant</h3>
-  <span>{chatOpen ? '−' : '+'}</span>
-        </div>
+const Chatbot = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: '👋 Hello! How can I help you today?' }
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const messagesEndRef = useRef(null);
+
+  const API_KEY = 'b29ea8d49d8242c5a96c315a6fe64440';
+  const API_URL = 'https://api.aimlapi.com/v1/chat/completions';
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!message.trim() || loading) return;
+    if (!input.trim() || isLoading) return;
 
-    const userMessage = { text: message, sender: 'user' };
-    setChatHistory(prev => [...prev, userMessage]);
-    setLoading(true);
-    setMessage('');
+    const userMessage = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+    setErrorMessage('');
 
     try {
-      const response = await axios.post(
-        `${API_CONFIG.baseUrl}/chat/completions`,
-        {
-          model: API_CONFIG.model,
-          messages: [
-            {
-              role: "system",
-              content: "You are a helpful assistant that helps answer questions about this portfolio."
-            },
-            {
-              role: "user",
-              content: message
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 256
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`
         },
-        {
-          headers: {
-            'Authorization': `Bearer ${API_CONFIG.apiKey}`,
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [...messages, userMessage],
+          temperature: 0.7
+        })
+      });
 
-      if (response.data?.choices?.[0]?.message?.content) {
-        const aiMessage = {
-          text: response.data.choices[0].message.content,
-          sender: 'ai'
-        };
-        setChatHistory(prev => [...prev, aiMessage]);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
       }
+
+      const data = await response.json();
+      const botMessage = data.choices[0].message;
+      setMessages(prev => [...prev, botMessage]);
     } catch (error) {
-      console.error('API Error:', error);
-      const errorMessage = {
-        text: `Error: ${error.message || 'Failed to get response from AI'}`,
-        sender: 'ai'
-      };
-      setChatHistory(prev => [...prev, errorMessage]);
+      console.error('Error:', error);
+      setErrorMessage(error.message);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "❌ Sorry, I’m having trouble responding. Try again soon."
+      }]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // Portfolio data
-  const projects = [
-    {
-      id: 1,
-      title: "E-commerce Platform",
-      description: "A full-stack e-commerce solution with React and Node.js",
-      technologies: ["React", "Node.js", "MongoDB"]
+  const styles = {
+    wrapper: {
+      position: 'fixed',
+      bottom: '20px',
+      left: '20px',
+      zIndex: 9999,
+      fontFamily: "'Segoe UI', sans-serif"
     },
-    {
-      id: 2,
-      title: "Weather Dashboard",
-      description: "Real-time weather application using weather API",
-      technologies: ["JavaScript", "API Integration", "CSS"]
+    toggleButton: {
+      backgroundColor: '#2563eb',
+      color: 'white',
+      padding: '12px 18px',
+      borderRadius: '30px',
+      border: 'none',
+      cursor: 'pointer',
+      fontWeight: 'bold',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+      transition: 'background 0.3s',
+    },
+    toggleButtonHover: {
+      backgroundColor: '#1e40af',
+    },
+    chatbot: {
+      width: '360px',
+      height: '540px',
+      display: isOpen ? 'flex' : 'none',
+      flexDirection: 'column',
+      background: 'rgba(255, 255, 255, 0.85)',
+      backdropFilter: 'blur(10px)',
+      borderRadius: '20px',
+      overflow: 'hidden',
+      marginTop: '12px',
+      boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
+      animation: isOpen ? 'slideUp 0.3s ease-out' : ''
+    },
+    header: {
+      backgroundColor: '#1e40af',
+      color: 'white',
+      padding: '16px',
+      fontSize: '17px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      fontWeight: '600'
+    },
+    icon: {
+      fontSize: '20px'
+    },
+    messages: {
+      flex: 1,
+      overflowY: 'auto',
+      padding: '16px',
+      backgroundColor: 'transparent',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px'
+    },
+    message: {
+      padding: '12px 16px',
+      borderRadius: '20px',
+      maxWidth: '80%',
+      lineHeight: '1.5',
+      wordWrap: 'break-word',
+      fontSize: '15px'
+    },
+    user: {
+      backgroundColor: '#2563eb',
+      color: 'white',
+      alignSelf: 'flex-end',
+      borderBottomRightRadius: '6px'
+    },
+    assistant: {
+      backgroundColor: '#f3f4f6',
+      color: '#111827',
+      alignSelf: 'flex-start',
+      borderBottomLeftRadius: '6px'
+    },
+    error: {
+      color: '#dc2626',
+      fontSize: '14px',
+      padding: '8px 12px',
+      textAlign: 'center',
+      backgroundColor: '#fee2e2',
+      borderRadius: '4px',
+      margin: '8px 16px'
+    },
+    typingIndicator: {
+      display: 'flex',
+      alignItems: 'center',
+      padding: '12px 16px',
+      backgroundColor: '#e5e7eb',
+      borderRadius: '18px',
+      alignSelf: 'flex-start',
+      width: 'fit-content'
+    },
+    dot: {
+      height: '10px',
+      width: '10px',
+      backgroundColor: '#6b7280',
+      borderRadius: '50%',
+      margin: '0 3px',
+      animation: 'bounce 1.5s infinite ease-in-out'
+    },
+    inputForm: {
+      display: 'flex',
+      borderTop: '1px solid #ddd',
+      backgroundColor: 'white',
+      padding: '8px'
+    },
+    input: {
+      flex: '1',
+      padding: '12px 16px',
+      border: '1px solid #ddd',
+      borderRadius: '24px',
+      outline: 'none',
+      fontSize: '15px',
+      marginRight: '8px'
+    },
+    button: {
+      padding: '0 24px',
+      backgroundColor: '#2563eb',
+      color: 'white',
+      border: 'none',
+      borderRadius: '24px',
+      cursor: 'pointer',
+      fontSize: '15px',
+      fontWeight: '600'
+    },
+    buttonDisabled: {
+      opacity: '0.6',
+      cursor: 'not-allowed'
     }
-  ];
+  };
 
-  const skills = [
-    { name: "JavaScript", icon: <FaJs /> },
-    { name: "React", icon: <FaReact /> },
-    { name: "Node.js", icon: <FaNodeJs /> },
-    { name: "HTML/CSS", icon: <FaHtml5 /> },
-    { name: "Python", icon: <FaPython /> },
-    { name: "Git", icon: <FaGit /> }
-  ];
+  const keyframes = `
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  `;
 
   return (
-    <div className="portfolio-container">
-      {/* Header/Navigation */}
-      <header className="portfolio-header">
-        <h1>Shubham kumar</h1>
-        <p>Full Stack Developer</p>
-        <nav className="portfolio-nav">
-          <button 
-            className={activeTab === 'about' ? 'active' : ''}
-            onClick={() => setActiveTab('about')}
-          >
-            About
-          </button>
-          <button 
-            className={activeTab === 'projects' ? 'active' : ''}
-            onClick={() => setActiveTab('projects')}
-          >
-            Projects
-          </button>
-          <button 
-            className={activeTab === 'skills' ? 'active' : ''}
-            onClick={() => setActiveTab('skills')}
-          >
-            Skills
-          </button>
-          <button 
-            className={activeTab === 'contact' ? 'active' : ''}
-            onClick={() => setActiveTab('contact')}
-          >
-            Contact
-          </button>
-        </nav>
-      </header>
+    <div style={styles.wrapper}>
+      <style>{keyframes}</style>
+      <button
+        style={styles.toggleButton}
+        onClick={() => setIsOpen(!isOpen)}
+        onMouseEnter={(e) => e.target.style.background = '#1e40af'}
+        onMouseLeave={(e) => e.target.style.background = '#2563eb'}
+      >
+        {isOpen ? '✖️ Close' : '💬 Chat with us'}
+      </button>
 
-      {/* Main Content */}
-      <main className="portfolio-content">
-        {activeTab === 'about' && (
-          <section className="about-section">
-            <h2>About Me</h2>
-            <p>
-              I'm a passionate full-stack developer with 5 years of experience 
-              building web applications. I specialize in JavaScript technologies 
-              and love solving complex problems with clean, efficient code.
-            </p>
-            <div className="about-image"></div>
-          </section>
-        )}
-
-        {activeTab === 'projects' && (
-          <section className="projects-section">
-            <h2>My Projects</h2>
-            <div className="projects-grid">
-              {projects.map(project => (
-                <div key={project.id} className="project-card">
-                  <h3>{project.title}</h3>
-                  <p>{project.description}</p>
-                  <div className="tech-tags">
-                    {project.technologies.map(tech => (
-                      <span key={tech} className="tech-tag">{tech}</span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-{activeTab === 'skills' && (
-  <section className="skills-section">
-    <h2>Skills & Technologies</h2>
-    <div className="skills-list">
-      {skills.map((skill, index) => (
-        <div key={index} className="skill-item">
-          <span className="skill-icon">{skill.icon}</span>
-        {  /*<span className="skill-name">{skill.name}</span>*/}
+      <div style={styles.chatbot}>
+        <div style={styles.header}>
+          <span style={styles.icon}>🤖</span>
+          AI Assistant
         </div>
-      ))}
-    </div>
-  </section>
-)}
 
-        {activeTab === 'contact' && (
-          <section className="contact-section">
-            <h2>Get In Touch</h2>
-            <form className="contact-form">
-              <input type="text" placeholder="Your Name" />
-              <input type="email" placeholder="Your Email" />
-              <textarea placeholder="Your Message"></textarea>
-              <button type="submit">Send Message</button>
-            </form>
-          </section>
-        )}
-      </main>
-
-      {/* AI Chat Widget */}
-      <div className={`chat-widget ${chatOpen ? 'open' : ''}`}>
-        <div className="chat-header" onClick={() => setChatOpen(!chatOpen)}>
-          <h3>AI Assistant</h3>
-          <span>{chatOpen ? '−' : '+'}</span>
-        </div>
-        
-        {chatOpen && (
-          <div className="chat-container">
-            <div className="chat-history">
-              {chatHistory.map((msg, index) => (
-                <div key={index} className={`chat-message ${msg.sender}`}>
-                  <strong>{msg.sender === 'user' ? 'You:' : 'AI:'}</strong>
-                  <p>{msg.text}</p>
-                </div>
-              ))}
+        <div style={styles.messages}>
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              style={{
+                ...styles.message,
+                ...(msg.role === 'user' ? styles.user : styles.assistant)
+              }}
+            >
+              {msg.content}
             </div>
-            <form onSubmit={handleSubmit} className="chat-input-form">
-              <input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Ask me anything..."
-                disabled={loading}
-              />
-              <button type="submit" disabled={!message.trim() || loading}>
-                {loading ? '...' : 'Send'}
-              </button>
-            </form>
-          </div>
-        )}
+          ))}
+
+          {isLoading && (
+            <div style={styles.typingIndicator}>
+              <span style={{ ...styles.dot, animationDelay: '0s' }}></span>
+              <span style={{ ...styles.dot, animationDelay: '0.2s' }}></span>
+              <span style={{ ...styles.dot, animationDelay: '0.4s' }}></span>
+            </div>
+          )}
+
+          {errorMessage && <div style={styles.error}>{errorMessage}</div>}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        <form onSubmit={handleSubmit} style={styles.inputForm}>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message..."
+            disabled={isLoading}
+            style={styles.input}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            style={{
+              ...styles.button,
+              ...(isLoading || !input.trim() ? styles.buttonDisabled : {})
+            }}
+          >
+            Send
+          </button>
+        </form>
       </div>
-
-      <footer className="portfolio-footer">
-        <p>© {new Date().getFullYear()} John Doe. All rights reserved.</p>
-      </footer>
     </div>
   );
+};
 
-
-export default Portfolio;
+export default Chatbot;
