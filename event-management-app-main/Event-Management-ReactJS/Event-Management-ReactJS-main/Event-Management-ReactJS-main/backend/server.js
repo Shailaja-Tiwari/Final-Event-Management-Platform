@@ -83,18 +83,49 @@ app.post('/login', async (req, res) => {
 });
 
 // Ticket booking route
-app.post('/gettickets', async (req, res) => {
-  const { name, email, event } = req.body;
+app.post('/gettickets',  (req, res) => {
+  const { name, email, event, amount = 100 } = req.body;
+
   if (!name || !email || !event) {
     return res.status(400).json({ success: false, message: 'Name, email, and event are required' });
   }
+  const amountInRupees = parseInt(amount); // already destructured from req.body
+  const amountInPaise = isNaN(amountInRupees) ? 10000 : amountInRupees * 100;
+  const options = {
+    amount: amountInPaise,
+    currency: 'INR',
+    receipt: `receipt_order_${Date.now()}`
+  };
+
   try {
-    const newTicket = new Ticket({ name, email, event });
-    await newTicket.save();
-    res.status(201).json({ success: true, message: 'Ticket booked successfully!' });
+    console.log("Creating Razorpay order with options:", options);
+
+    const order =  razorpay.orders.create(options);
+
+    console.log("Razorpay Order created:", order);
+
+    return res.status(200).json({ success: true, order });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("Error creating order:", err);
+    return res.status(500).json({ success: false, message: 'Error creating order', error: err });
   }
+});
+
+// Route to confirm payment
+app.post('/confirm-payment', (req, res) => {
+  const { name, email, event, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  const expectedSignature = crypto
+    .createHmac('sha256', razorpay.key_secret)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest('hex');
+
+  if (expectedSignature !== razorpay_signature) {
+    return res.status(400).json({ success: false, message: 'Invalid signature' });
+  }
+
+  tickets.push({ name, email, event });
+  res.json({ success: true, message: 'Ticket booked successfully' });
 });
 
 // JWT middleware
