@@ -1,0 +1,158 @@
+/* 🎯 HERO SECTION STYLES */
+
+.hero-section {
+  position: relative;
+  background: #fff; /* White background */
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 3rem;
+  border-radius: 0 0 25px 25px;
+  overflow: hidden;
+  padding: 2rem 0; /* Padding for spacing */
+}
+
+.hero-overlay {
+  background: rgba(0, 0, 0, 0.4); /* Darker overlay for text contrast */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-content {
+  text-align: center;
+  color: #333; /* Dark text */
+  max-width: 700px;
+  padding: 2rem;
+}
+
+.hero-content h1 {
+  font-size: 3.2rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  animation: fadeIn 1s ease-in-out;
+}
+
+.hero-content p {
+  font-size: 1.3rem;
+  margin-bottom: 2rem;
+  color: #333; /* Dark text */
+  animation: fadeIn 1.5s ease-in-out;
+}
+
+.hero-btn {
+  padding: 0.8rem 2.2rem;
+  background: #ff4081;
+  border: none;
+  color: white;
+  font-size: 1rem;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: fadeIn 2s ease-in-out;
+}
+
+.hero-btn:hover {
+  background: #e91e63;
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(233, 30, 99, 0.4);
+}
+
+/* ✨ Fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  } to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* 🎯 Section Heading */
+.section-heading {
+  text-align: center;
+  margin-bottom: 2rem;
+  animation: fadeInDown 1s ease-in-out;
+}
+
+.section-heading h2 {
+  font-size: 2.5rem;
+  color: #222;
+  margin-bottom: 0.5rem;
+}
+
+.section-heading p {
+  font-size: 1.1rem;
+  color: #666;
+}
+
+/* ✨ Cards Grid */
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* Two cards per row */
+  gap: 2rem;
+  padding: 0 2rem;
+  justify-content: center;
+}
+
+/* 🎴 Card Enhancements */
+.card-link {
+  text-decoration: none;
+}
+
+.card {
+  background-color: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-img-wrapper img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.card-content {
+  padding: 1rem;
+  color: #333;
+}
+
+.card-content h3 {
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.card-content .event-date,
+.card-content .event-location {
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+  color: #666;
+}
+
+/* ✨ Title fade-in animation */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  } to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 768px) {
+  .event-grid {
+    grid-template-columns: 1fr; /* 1 card on smaller screens */
+  }
+}
+
